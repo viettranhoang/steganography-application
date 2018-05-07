@@ -1,23 +1,32 @@
 package com.staganography.app.gui;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.JTabbedPane;
-import java.awt.FlowLayout;
-import javax.swing.JLabel;
 import java.awt.Color;
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.border.LineBorder;
-import java.awt.event.ActionListener;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+
+import com.staganography.app.common.ImageFilter;
+import com.staganography.app.model.AES;
+import com.staganography.app.model.Steganography;
 
 public class MainFrame extends JFrame {
+	
+	private File fileImageInput;
+	private File fileImageDecode;
+	private Steganography model;
 
 	private JPanel contentPane;
 	private JTabbedPane tabbedPane;
@@ -53,6 +62,9 @@ public class MainFrame extends JFrame {
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
+		
+		model = new Steganography();
+		
 		
 		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
 		tabbedPane.setBounds(0, 0, 684, 461);
@@ -93,7 +105,7 @@ public class MainFrame extends JFrame {
 		btn_choose_encode = new JButton("Chọn ảnh");
 		btn_choose_encode.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				chooseImageEncode();
+				fileImageInput = chooseImage(lbInput);
 			}
 		});
 		btn_choose_encode.setBounds(113, 303, 89, 23);
@@ -144,7 +156,7 @@ public class MainFrame extends JFrame {
 		btn_choose_decode = new JButton("Chọn ảnh");
 		btn_choose_decode.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				chooseImageDecode();
+				fileImageDecode = chooseImage(lb_image_decode);
 			}
 		});
 		btn_choose_decode.setBounds(165, 309, 89, 23);
@@ -184,19 +196,86 @@ public class MainFrame extends JFrame {
 	}
 
 	protected void decode() {
+		String image = fileImageDecode.getPath();
+		String stat_name = fileImageDecode.getName();
+		String stat_path = fileImageDecode.getPath();
+		stat_path = stat_path.substring(0,stat_path.length()-stat_name.length()-1);
+		stat_name = stat_name.substring(0, stat_name.length()-4);
+		String message = model.decode(stat_path, stat_name);
 		
-	}
-
-	protected void chooseImageDecode() {
+		String key = tf_password_decode.getText();
+		String encrypted = "";
+		encrypted = AES.decrypt(message, key);
 		
+		tf_hide_message.setText(encrypted);
+		
+		/*if(!message.equals(""))
+		{
+			JOptionPane.showMessageDialog(this, "The Image was decoded Successfully!", 
+						"Success!", JOptionPane.INFORMATION_MESSAGE);
+			
+		}
+		else
+		{
+			JOptionPane.showMessageDialog(this, "The Image could not be decoded!", 
+						"Error!", JOptionPane.INFORMATION_MESSAGE);
+		}*/
 	}
 
 	protected void encode() {
+		String text = tf_message.getText();
+        String key = tf_password_encode.getText();
+        String encrypted = "";
+        try{
+        	encrypted = AES.encrypt(text, key);
+        }catch(Exception e){
+            JOptionPane.showMessageDialog(this, "Mã hóa AES lỗi");
+        }
+		String ext  = ImageFilter.getExtension(fileImageInput);
+		String name = fileImageInput.getName();
+		String path = fileImageInput.getPath();
+		path = path.substring(0,path.length()-name.length()-1);
+		name = name.substring(0, name.length()-4);
 		
+		String stegan = JOptionPane.showInputDialog(this,
+						"Enter output file name:", "File name",
+						JOptionPane.PLAIN_MESSAGE);
+		
+		if(model.encode(path,name,ext,stegan,encrypted))
+		{
+			JOptionPane.showMessageDialog(this, "The Image was encoded Successfully!", 
+				"Success!", JOptionPane.INFORMATION_MESSAGE);
+			
+			try {
+				String fileName = path + "/" + stegan + ".png";
+				showImage(lbOutput, fileName);
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			JOptionPane.showMessageDialog(this, "The Image could not be encoded!", 
+				"Error!", JOptionPane.INFORMATION_MESSAGE);
+		}
 	}
 
-	protected void chooseImageEncode() {
-		
-		
+	
+	public File chooseImage(JLabel lbShow) {
+		JFileChooser fc = new JFileChooser();
+        fc.showOpenDialog(null);
+        File f = fc.getSelectedFile();
+        String filename = f.getAbsolutePath();
+        showImage(lbShow, filename);
+        return f;
+	}
+	
+	public void showImage(JLabel lbShow, String path) {
+		ImageIcon icon = new ImageIcon(path);
+        Image newImg = icon.getImage();
+        Image img = newImg.getScaledInstance(lbShow.getWidth(), lbShow.getHeight(), Image.SCALE_SMOOTH);
+        ImageIcon image = new ImageIcon(img);
+        lbShow.setIcon(image);
 	}
 }
